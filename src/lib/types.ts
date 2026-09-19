@@ -24,6 +24,9 @@ export type AnimationStyle =
   | "fragment"
   | "orbit"
   | "chaos"
+  | "pulse"
+  | "cascade"
+  | "zoom"
   | "random";
 
 export interface LrcLibResponse {
