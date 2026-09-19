@@ -21,6 +21,9 @@ export type AnimationStyle =
   | "wave"
   | "scale"
   | "typewriter"
+  | "fragment"
+  | "orbit"
+  | "chaos"
   | "random";
 
 export interface LrcLibResponse {
