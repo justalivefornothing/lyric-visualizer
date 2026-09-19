@@ -151,38 +151,35 @@ export default function Home() {
   const hasLyrics = lines.length > 0;
 
   return (
-    <main className="min-h-screen flex flex-col relative overflow-hidden">
+    <main className="min-h-[100dvh] flex flex-col relative overflow-hidden">
       {/* ====== MULTI-LAYER CINEMATIC BACKGROUND ====== */}
       <div className="fixed inset-0 pointer-events-none">
-        {/* Base deep black */}
         <div className="absolute inset-0 bg-[#030306]" />
 
-        {/* Large soft color orbs */}
         <div
-          className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full opacity-40 blur-[120px]"
+          className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full opacity-40 blur-[80px] sm:blur-[120px]"
           style={{
             background:
               "radial-gradient(circle, rgba(79,70,229,0.55) 0%, transparent 70%)",
           }}
         />
         <div
-          className="absolute top-[30%] -right-[15%] w-[55vw] h-[55vw] rounded-full opacity-35 blur-[100px]"
+          className="absolute top-[30%] -right-[15%] w-[55vw] h-[55vw] rounded-full opacity-35 blur-[70px] sm:blur-[100px]"
           style={{
             background:
               "radial-gradient(circle, rgba(219,39,119,0.45) 0%, transparent 70%)",
           }}
         />
         <div
-          className="absolute -bottom-[10%] left-[20%] w-[50vw] h-[50vw] rounded-full opacity-30 blur-[110px]"
+          className="absolute -bottom-[10%] left-[20%] w-[50vw] h-[50vw] rounded-full opacity-30 blur-[70px] sm:blur-[110px]"
           style={{
             background:
               "radial-gradient(circle, rgba(6,182,212,0.35) 0%, transparent 70%)",
           }}
         />
 
-        {/* Subtle grid */}
         <div
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 opacity-[0.03] hidden sm:block"
           style={{
             backgroundImage:
               "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)",
@@ -190,10 +187,9 @@ export default function Home() {
           }}
         />
 
-        {/* Center spotlight when lyrics are playing */}
         {hasLyrics && (
           <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vmin] h-[90vmin] rounded-full opacity-20 blur-[80px] transition-opacity duration-700"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vmin] h-[90vmin] rounded-full opacity-20 blur-[60px] sm:blur-[80px] transition-opacity duration-700"
             style={{
               background:
                 "radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 65%)",
@@ -201,24 +197,23 @@ export default function Home() {
           />
         )}
 
-        {/* Strong vignette */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(0,0,0,0.7)_100%)]" />
       </div>
 
-      {/* ====== HEADER ====== */}
-      <header className="relative z-20 pt-7 pb-3 px-4">
-        <div className="max-w-2xl mx-auto text-center mb-5">
-          <div className="inline-flex items-center gap-2.5 mb-2">
+      {/* ====== HEADER – compact on mobile ====== */}
+      <header className="relative z-20 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 px-3 sm:px-4 sm:pt-7 sm:pb-3">
+        <div className="max-w-2xl mx-auto text-center mb-3 sm:mb-5">
+          <div className="inline-flex items-center gap-2 mb-1 sm:mb-2">
             <div className="relative">
-              <Music2 className="w-7 h-7 text-indigo-300" />
-              <Sparkles className="w-3.5 h-3.5 text-pink-400 absolute -top-1 -right-1.5" />
+              <Music2 className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-300" />
+              <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-pink-400 absolute -top-1 -right-1.5" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-indigo-100 to-pink-200 bg-clip-text text-transparent">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-indigo-100 to-pink-200 bg-clip-text text-transparent">
               Lyric Visualizer
             </h1>
           </div>
-          <p className="text-white/40 text-sm md:text-base">
-            Paste a YouTube link or type {'"Song – Artist"'}. Watch lyrics explode.
+          <p className="text-white/40 text-xs sm:text-sm md:text-base hidden xs:block sm:block">
+            Paste a YouTube link or type {'"Song – Artist"'}
           </p>
         </div>
 
@@ -226,32 +221,34 @@ export default function Home() {
           onSubmit={handleSubmit}
           className="max-w-2xl mx-auto flex gap-2"
         >
-          <div className="relative flex-1">
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/35">
+          <div className="relative flex-1 min-w-0">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35 pointer-events-none">
               {input.includes("youtube") || input.includes("youtu.be") ? (
-                <Link2 className="w-5 h-5" />
+                <Link2 className="w-4 h-4 sm:w-5 sm:h-5" />
               ) : (
-                <Search className="w-5 h-5" />
+                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
             </div>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder='YouTube URL or "Blinding Lights - The Weeknd"'
-              className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-white/[0.04] border border-white/10
-                focus:border-indigo-400/40 outline-none
+              placeholder="YouTube URL or Song – Artist"
+              className="w-full pl-9 sm:pl-11 pr-3 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-white/[0.04] border border-white/10
+                focus:border-indigo-400/40 outline-none text-sm sm:text-base
                 text-white placeholder:text-white/25 transition-all duration-200"
               disabled={loading}
+              enterKeyHint="go"
             />
           </div>
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600
-              hover:from-indigo-500 hover:to-violet-500 disabled:opacity-40
+            className="px-4 sm:px-6 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600
+              active:from-indigo-500 active:to-violet-500 disabled:opacity-40
               disabled:cursor-not-allowed font-semibold transition-all duration-200
-              flex items-center gap-2 shadow-lg shadow-indigo-900/40"
+              flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/40
+              touch-manipulation min-w-[3.5rem] sm:min-w-0"
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -262,15 +259,15 @@ export default function Home() {
         </form>
 
         {error && (
-          <div className="max-w-2xl mx-auto mt-3 flex items-start gap-2 text-amber-200/90 text-sm bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
+          <div className="max-w-2xl mx-auto mt-2 sm:mt-3 flex items-start gap-2 text-amber-200/90 text-xs sm:text-sm bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{error}</span>
+            <span className="leading-snug">{error}</span>
           </div>
         )}
       </header>
 
-      {/* ====== STAGE ====== */}
-      <section className="relative z-10 flex-1 flex items-center justify-center min-h-[48vh] px-2">
+      {/* ====== STAGE – takes remaining space ====== */}
+      <section className="relative z-10 flex-1 flex items-center justify-center min-h-0 px-2 py-2">
         {hasLyrics ? (
           <LyricVisualizer
             lines={lines}
@@ -279,26 +276,27 @@ export default function Home() {
             isPlaying={playing}
           />
         ) : (
-          <div className="text-center select-none px-6">
-            <div className="relative inline-block mb-6">
+          <div className="text-center select-none px-4">
+            <div className="relative inline-block mb-4 sm:mb-6">
               <div className="absolute inset-0 blur-2xl bg-indigo-500/20 rounded-full scale-150" />
-              <Music2 className="relative w-20 h-20 text-white/15" />
+              <Music2 className="relative w-14 h-14 sm:w-20 sm:h-20 text-white/15" />
             </div>
-            <p className="text-xl md:text-2xl font-medium text-white/25 tracking-wide">
+            <p className="text-base sm:text-xl md:text-2xl font-medium text-white/25 tracking-wide">
               Kinetic lyrics appear here
             </p>
-            <p className="mt-2 text-sm text-white/15 max-w-xs mx-auto">
-              Drop · Shatter · Fragment · Chaos · Orbit and more
+            <p className="mt-1.5 text-xs sm:text-sm text-white/15 max-w-xs mx-auto">
+              Drop · Shatter · Fragment · Chaos · Orbit
             </p>
           </div>
         )}
       </section>
 
-      {/* ====== FOOTER / CONTROLS ====== */}
-      <footer className="relative z-20 p-4 pb-6">
+      {/* ====== FOOTER – safe area, compact video on mobile ====== */}
+      <footer className="relative z-20 px-3 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4 sm:pb-6">
         <div className="max-w-3xl mx-auto">
+          {/* Tiny / hidden video on mobile so lyrics stay front and center */}
           {url && (
-            <div className="mb-3 rounded-2xl overflow-hidden aspect-video max-h-36 md:max-h-44 mx-auto w-full max-w-sm bg-black/60 border border-white/5 shadow-2xl">
+            <div className="mb-2 sm:mb-3 rounded-xl sm:rounded-2xl overflow-hidden aspect-video max-h-24 sm:max-h-36 md:max-h-44 mx-auto w-full max-w-[200px] sm:max-w-sm bg-black/60 border border-white/5 shadow-2xl">
               <ReactPlayer
                 ref={playerRef}
                 url={url}
