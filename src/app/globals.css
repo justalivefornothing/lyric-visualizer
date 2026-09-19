@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #030306;
-  --foreground: #f5f5f7;
+  --background: #020204;
+  --foreground: #f8f8fa;
 }
 
 html,
@@ -13,45 +13,42 @@ body {
   background: var(--background);
   color: var(--foreground);
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Film grain overlay */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 50;
-  opacity: 0.045;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index: 40;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
-  background-size: 180px;
+  background-size: 160px;
   mix-blend-mode: overlay;
 }
 
-/* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #2a2a32;
   border-radius: 3px;
 }
 
-.lyric-word {
-  display: inline-block;
-  will-change: transform, opacity;
-}
-
 .glass {
-  background: rgba(12, 12, 18, 0.72);
-  backdrop-filter: blur(20px) saturate(1.4);
+  background: rgba(8, 8, 14, 0.8);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .scrollbar-none {
@@ -62,12 +59,20 @@ body::before {
   display: none;
 }
 
-.preserve-3d {
-  transform-style: preserve-3d;
+input[type="range"] {
+  touch-action: none;
 }
 
-/* Soft glow input focus */
+.lyric-glow {
+  text-shadow:
+    0 0 24px rgba(255, 255, 255, 0.4),
+    0 0 64px rgba(129, 140, 248, 0.3),
+    0 6px 28px rgba(0, 0, 0, 0.65);
+}
+
+/* Smooth focus ring */
 input:focus {
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.4),
-    0 0 24px rgba(99, 102, 241, 0.15);
+  box-shadow:
+    0 0 0 1px rgba(129, 140, 248, 0.45),
+    0 0 28px rgba(99, 102, 241, 0.2);
 }
