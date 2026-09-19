@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Search, Link2, Loader2, Music2, AlertCircle } from "lucide-react";
+import { Search, Link2, Loader2, Music2, AlertCircle, Sparkles } from "lucide-react";
 import LyricVisualizer from "@/components/LyricVisualizer";
 import PlayerControls from "@/components/PlayerControls";
 import {
@@ -13,7 +13,6 @@ import {
 } from "@/lib/lyrics";
 import { LyricLine, AnimationStyle, SongMeta } from "@/lib/types";
 
-// react-player needs dynamic import (no SSR)
 const ReactPlayer = dynamic(() => import("react-player/lazy"), { ssr: false });
 
 export default function Home() {
@@ -22,7 +21,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [lines, setLines] = useState<LyricLine[]>([]);
   const [meta, setMeta] = useState<SongMeta | null>(null);
-  const [url, setUrl] = useState<string | null>(null); // playable URL
+  const [url, setUrl] = useState<string | null>(null);
 
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -34,7 +33,6 @@ export default function Home() {
   const playerRef = useRef<any>(null);
   const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Poll current time while playing (react-player onProgress is a bit laggy for lyrics)
   useEffect(() => {
     if (playing) {
       progressInterval.current = setInterval(() => {
@@ -76,13 +74,11 @@ export default function Home() {
         let spotifyId: string | null = null;
         let playUrl: string | null = null;
 
-        // Detect link type
         youtubeId = extractYouTubeId(q);
         spotifyId = extractSpotifyId(q);
 
         if (youtubeId) {
           playUrl = `https://www.youtube.com/watch?v=${youtubeId}`;
-          // We still need title/artist for lyrics. Use oEmbed to get title.
           try {
             const oembed = await fetch(
               `https://www.youtube.com/oembed?url=${encodeURIComponent(playUrl)}&format=json`
@@ -90,33 +86,27 @@ export default function Home() {
             if (oembed.ok) {
               const data = await oembed.json();
               const fullTitle: string = data.title || "";
-              // Common pattern: "Artist - Title" or "Title by Artist"
               const parsed = parseSearchQuery(fullTitle);
               title = parsed.title;
               artist = parsed.artist || data.author_name || "";
             }
           } catch {
-            // fallback
             title = "Unknown Title";
             artist = "Unknown Artist";
           }
         } else if (spotifyId) {
-          // Spotify embeds work but we need metadata. Without Spotify API key we can only use the embed.
-          // For lyrics we still need title/artist – ask user or try a free lookup.
           setError(
             'Spotify links need title + artist for lyrics right now. Paste a YouTube link or type "Song Name - Artist" instead.'
           );
           setLoading(false);
           return;
         } else {
-          // Plain search query
           const parsed = parseSearchQuery(q);
           title = parsed.title;
           artist = parsed.artist;
           playUrl = null;
         }
 
-        // Fetch lyrics
         const result = await fetchLyrics(title, artist || title);
         if (!result || result.lines.length === 0) {
           setError(
@@ -137,11 +127,10 @@ export default function Home() {
 
         if (playUrl) {
           setUrl(playUrl);
-          // Auto-play after a short delay so player mounts
           setTimeout(() => setPlaying(true), 600);
         } else {
           setError(
-            "Lyrics loaded! For audio, paste a YouTube link of the same song (or search + pick a YT result yourself)."
+            "Lyrics loaded! For audio, paste a YouTube link of the same song."
           );
         }
       } catch (err) {
@@ -159,21 +148,76 @@ export default function Home() {
     playerRef.current?.seekTo?.(time, "seconds");
   };
 
-  return (
-    <main className="min-h-screen flex flex-col relative">
-      {/* Background gradient */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950/40 via-black to-black pointer-events-none" />
+  const hasLyrics = lines.length > 0;
 
-      {/* Header / Search */}
-      <header className="relative z-20 pt-8 pb-4 px-4">
-        <div className="max-w-2xl mx-auto text-center mb-6">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <Music2 className="w-7 h-7 text-indigo-400" />
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+  return (
+    <main className="min-h-screen flex flex-col relative overflow-hidden">
+      {/* ====== MULTI-LAYER CINEMATIC BACKGROUND ====== */}
+      <div className="fixed inset-0 pointer-events-none">
+        {/* Base deep black */}
+        <div className="absolute inset-0 bg-[#030306]" />
+
+        {/* Large soft color orbs */}
+        <div
+          className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full opacity-40 blur-[120px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(79,70,229,0.55) 0%, transparent 70%)",
+          }}
+        />
+        <div
+          className="absolute top-[30%] -right-[15%] w-[55vw] h-[55vw] rounded-full opacity-35 blur-[100px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(219,39,119,0.45) 0%, transparent 70%)",
+          }}
+        />
+        <div
+          className="absolute -bottom-[10%] left-[20%] w-[50vw] h-[50vw] rounded-full opacity-30 blur-[110px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(6,182,212,0.35) 0%, transparent 70%)",
+          }}
+        />
+
+        {/* Subtle grid */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)",
+            backgroundSize: "64px 64px",
+          }}
+        />
+
+        {/* Center spotlight when lyrics are playing */}
+        {hasLyrics && (
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vmin] h-[90vmin] rounded-full opacity-20 blur-[80px] transition-opacity duration-700"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 65%)",
+            }}
+          />
+        )}
+
+        {/* Strong vignette */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(0,0,0,0.7)_100%)]" />
+      </div>
+
+      {/* ====== HEADER ====== */}
+      <header className="relative z-20 pt-7 pb-3 px-4">
+        <div className="max-w-2xl mx-auto text-center mb-5">
+          <div className="inline-flex items-center gap-2.5 mb-2">
+            <div className="relative">
+              <Music2 className="w-7 h-7 text-indigo-300" />
+              <Sparkles className="w-3.5 h-3.5 text-pink-400 absolute -top-1 -right-1.5" />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-indigo-100 to-pink-200 bg-clip-text text-transparent">
               Lyric Visualizer
             </h1>
           </div>
-          <p className="text-white/50 text-sm md:text-base">
+          <p className="text-white/40 text-sm md:text-base">
             Paste a YouTube link or type {'"Song – Artist"'}. Watch lyrics explode.
           </p>
         </div>
@@ -183,7 +227,7 @@ export default function Home() {
           className="max-w-2xl mx-auto flex gap-2"
         >
           <div className="relative flex-1">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/35">
               {input.includes("youtube") || input.includes("youtu.be") ? (
                 <Link2 className="w-5 h-5" />
               ) : (
@@ -195,17 +239,19 @@ export default function Home() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder='YouTube URL or "Blinding Lights - The Weeknd"'
-              className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white/5 border border-white/10
-                focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 outline-none
-                text-white placeholder:text-white/30 transition"
+              className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-white/[0.04] border border-white/10
+                focus:border-indigo-400/40 outline-none
+                text-white placeholder:text-white/25 transition-all duration-200"
               disabled={loading}
             />
           </div>
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="px-6 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50
-              disabled:cursor-not-allowed font-medium transition flex items-center gap-2"
+            className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600
+              hover:from-indigo-500 hover:to-violet-500 disabled:opacity-40
+              disabled:cursor-not-allowed font-semibold transition-all duration-200
+              flex items-center gap-2 shadow-lg shadow-indigo-900/40"
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -216,16 +262,16 @@ export default function Home() {
         </form>
 
         {error && (
-          <div className="max-w-2xl mx-auto mt-3 flex items-start gap-2 text-amber-300/90 text-sm bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3">
+          <div className="max-w-2xl mx-auto mt-3 flex items-start gap-2 text-amber-200/90 text-sm bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
       </header>
 
-      {/* Visualizer Stage */}
-      <section className="relative z-10 flex-1 flex items-center justify-center min-h-[50vh] px-2">
-        {lines.length > 0 ? (
+      {/* ====== STAGE ====== */}
+      <section className="relative z-10 flex-1 flex items-center justify-center min-h-[48vh] px-2">
+        {hasLyrics ? (
           <LyricVisualizer
             lines={lines}
             currentTime={currentTime}
@@ -233,19 +279,26 @@ export default function Home() {
             isPlaying={playing}
           />
         ) : (
-          <div className="text-center text-white/20 select-none">
-            <Music2 className="w-16 h-16 mx-auto mb-4 opacity-30" />
-            <p className="text-lg">Your kinetic lyrics will appear here</p>
+          <div className="text-center select-none px-6">
+            <div className="relative inline-block mb-6">
+              <div className="absolute inset-0 blur-2xl bg-indigo-500/20 rounded-full scale-150" />
+              <Music2 className="relative w-20 h-20 text-white/15" />
+            </div>
+            <p className="text-xl md:text-2xl font-medium text-white/25 tracking-wide">
+              Kinetic lyrics appear here
+            </p>
+            <p className="mt-2 text-sm text-white/15 max-w-xs mx-auto">
+              Drop · Shatter · Fragment · Chaos · Orbit and more
+            </p>
           </div>
         )}
       </section>
 
-      {/* Hidden / small player + controls */}
+      {/* ====== FOOTER / CONTROLS ====== */}
       <footer className="relative z-20 p-4 pb-6">
         <div className="max-w-3xl mx-auto">
-          {/* Actual audio/video player (YouTube) – kept small */}
           {url && (
-            <div className="mb-3 rounded-xl overflow-hidden aspect-video max-h-40 md:max-h-48 mx-auto w-full max-w-md bg-black/50">
+            <div className="mb-3 rounded-2xl overflow-hidden aspect-video max-h-36 md:max-h-44 mx-auto w-full max-w-sm bg-black/60 border border-white/5 shadow-2xl">
               <ReactPlayer
                 ref={playerRef}
                 url={url}
@@ -255,12 +308,8 @@ export default function Home() {
                 width="100%"
                 height="100%"
                 controls={false}
-                onReady={() => {
-                  // duration often available here
-                }}
                 onDuration={(d) => setDuration(d)}
                 onProgress={({ playedSeconds }) => {
-                  // backup update
                   setCurrentTime(playedSeconds);
                 }}
                 onEnded={() => setPlaying(false)}
@@ -277,7 +326,7 @@ export default function Home() {
             </div>
           )}
 
-          {lines.length > 0 && (
+          {hasLyrics && (
             <PlayerControls
               isPlaying={playing}
               onTogglePlay={() => setPlaying((p) => !p)}
