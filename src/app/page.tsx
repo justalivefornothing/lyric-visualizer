@@ -32,7 +32,7 @@ export default function Home() {
   const [style, setStyle] = useState<AnimationStyle>("random");
 
   const playerRef = useRef<any>(null);
-  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Poll current time while playing (react-player onProgress is a bit laggy for lyrics)
   useEffect(() => {
@@ -45,9 +45,13 @@ export default function Home() {
       }, 80);
     } else if (progressInterval.current) {
       clearInterval(progressInterval.current);
+      progressInterval.current = null;
     }
     return () => {
-      if (progressInterval.current) clearInterval(progressInterval.current);
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+        progressInterval.current = null;
+      }
     };
   }, [playing]);
 
@@ -99,7 +103,6 @@ export default function Home() {
         } else if (spotifyId) {
           // Spotify embeds work but we need metadata. Without Spotify API key we can only use the embed.
           // For lyrics we still need title/artist – ask user or try a free lookup.
-          // For now treat the input after the ID as search fallback, but better to force search.
           setError(
             "Spotify links need title + artist for lyrics right now. Paste a YouTube link or type \"Song Name - Artist\" instead."
           );
@@ -110,11 +113,6 @@ export default function Home() {
           const parsed = parseSearchQuery(q);
           title = parsed.title;
           artist = parsed.artist;
-
-          // For audio we try to construct a YouTube search URL (user can still use their own YT link)
-          // Actually for best UX we leave audio empty and let user know they can paste YT later,
-          // but better: use a YouTube search embed is not reliable. We'll require YT for audio or just show lyrics.
-          // Simple solution: if no YT link, we still fetch lyrics and show a note that audio works best with YT links.
           playUrl = null;
         }
 
