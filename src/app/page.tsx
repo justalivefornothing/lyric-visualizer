@@ -36,6 +36,7 @@ export default function Home() {
   const [volume, setVolume] = useState(0.85);
   const [muted, setMuted] = useState(false);
   const [style, setStyle] = useState<AnimationStyle>("random");
+  const [immersive, setImmersive] = useState(false);
 
   const playerRef = useRef<any>(null);
   const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -59,6 +60,33 @@ export default function Home() {
       }
     };
   }, [playing]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        setPlaying((p) => !p);
+      } else if (e.key === "m" || e.key === "M") {
+        setMuted((m) => !m);
+      } else if (e.key === "f" || e.key === "F") {
+        setImmersive((v) => !v);
+      } else if (e.key === "ArrowRight") {
+        const next = Math.min((duration || 999) - 1, currentTime + 5);
+        setCurrentTime(next);
+        playerRef.current?.seekTo?.(next, "seconds");
+      } else if (e.key === "ArrowLeft") {
+        const prev = Math.max(0, currentTime - 5);
+        setCurrentTime(prev);
+        playerRef.current?.seekTo?.(prev, "seconds");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [currentTime, duration]);
 
   const handleSubmit = useCallback(
     async (e?: React.FormEvent) => {
@@ -156,10 +184,15 @@ export default function Home() {
   };
 
   const hasLyrics = lines.length > 0;
-  const focusMode = hasLyrics && playing;
+  const focusMode = (hasLyrics && playing) || immersive;
 
   return (
-    <main className="min-h-[100dvh] flex flex-col relative overflow-hidden">
+    <main
+      className="min-h-[100dvh] flex flex-col relative overflow-hidden"
+      onClick={() => {
+        if (immersive) setImmersive(false);
+      }}
+    >
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-[#020204]" />
@@ -196,11 +229,16 @@ export default function Home() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_15%,rgba(0,0,0,0.75)_100%)]" />
       </div>
 
-      {/* Header – fades in focus mode */}
+      {/* Header */}
       <header
         className={`relative z-20 pt-[max(0.6rem,env(safe-area-inset-top))] pb-2 px-3 sm:px-4 sm:pt-6 sm:pb-3 transition-all duration-500 ${
-          focusMode ? "opacity-30 hover:opacity-100" : "opacity-100"
+          immersive
+            ? "opacity-0 pointer-events-none -translate-y-4"
+            : focusMode
+              ? "opacity-25 hover:opacity-100"
+              : "opacity-100"
         }`}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="max-w-2xl mx-auto text-center mb-2.5 sm:mb-4">
           <div className="inline-flex items-center gap-2 mb-1">
@@ -262,7 +300,12 @@ export default function Home() {
 
       {/* Stage */}
       <section className="relative z-10 flex-1 flex items-center justify-center min-h-0 px-2">
-        {hasLyrics ? (
+        {loading ? (
+          <div className="flex flex-col items-center gap-4 text-white/30">
+            <Loader2 className="w-10 h-10 animate-spin text-indigo-400" />
+            <p className="text-sm">Fetching lyrics…</p>
+          </div>
+        ) : hasLyrics ? (
           <LyricVisualizer
             lines={lines}
             currentTime={currentTime}
@@ -279,19 +322,26 @@ export default function Home() {
               Kinetic lyrics appear here
             </p>
             <p className="mt-2 text-xs sm:text-sm text-white/12 max-w-xs mx-auto">
-              Drop · Shatter · Fragment · Chaos · Orbit
+              Space play · F immersive · M mute
             </p>
           </div>
         )}
       </section>
 
       {/* Footer */}
-      <footer className="relative z-20 px-3 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pb-5">
+      <footer
+        className={`relative z-20 px-3 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pb-5 transition-all duration-500 ${
+          immersive
+            ? "opacity-0 pointer-events-none translate-y-6"
+            : "opacity-100"
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="max-w-3xl mx-auto">
           {url && (
             <div
               className={`mb-2 rounded-xl overflow-hidden aspect-video mx-auto bg-black/70 border border-white/5 shadow-2xl transition-all duration-500 ${
-                focusMode
+                focusMode && !immersive
                   ? "max-h-16 max-w-[140px] opacity-60"
                   : "max-h-24 sm:max-h-36 md:max-h-40 max-w-[180px] sm:max-w-sm opacity-100"
               }`}
@@ -335,10 +385,19 @@ export default function Home() {
               onStyleChange={setStyle}
               title={meta?.title}
               artist={meta?.artist}
+              immersive={immersive}
+              onToggleImmersive={() => setImmersive((v) => !v)}
             />
           )}
         </div>
       </footer>
+
+      {/* Immersive hint */}
+      {immersive && (
+        <p className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 text-xs text-white/30 pointer-events-none animate-pulse">
+          Tap or press F to exit immersive
+        </p>
+      )}
     </main>
   );
 }
