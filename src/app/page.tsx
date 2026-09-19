@@ -104,7 +104,7 @@ export default function Home() {
           // Spotify embeds work but we need metadata. Without Spotify API key we can only use the embed.
           // For lyrics we still need title/artist – ask user or try a free lookup.
           setError(
-            "Spotify links need title + artist for lyrics right now. Paste a YouTube link or type \"Song Name - Artist\" instead."
+            'Spotify links need title + artist for lyrics right now. Paste a YouTube link or type "Song Name - Artist" instead.'
           );
           setLoading(false);
           return;
