@@ -57,20 +57,20 @@ export default function PlayerControls({
   artist,
 }: Props) {
   return (
-    <div className="glass rounded-2xl p-4 md:p-5 flex flex-col gap-3 shadow-2xl">
+    <div className="glass rounded-2xl p-3 sm:p-4 md:p-5 flex flex-col gap-2.5 sm:gap-3 shadow-2xl">
       {/* Meta */}
       {(title || artist) && (
-        <div className="text-center mb-1">
-          <p className="font-semibold text-sm md:text-base truncate">{title}</p>
+        <div className="text-center">
+          <p className="font-semibold text-sm truncate leading-tight">{title}</p>
           {artist && (
-            <p className="text-xs text-white/50 truncate">{artist}</p>
+            <p className="text-[11px] sm:text-xs text-white/50 truncate mt-0.5">{artist}</p>
           )}
         </div>
       )}
 
-      {/* Progress */}
-      <div className="flex items-center gap-3">
-        <span className="text-xs text-white/50 w-10 text-right tabular-nums">
+      {/* Progress – larger touch target on mobile */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="text-[11px] sm:text-xs text-white/50 w-9 sm:w-10 text-right tabular-nums shrink-0">
           {formatTime(currentTime)}
         </span>
         <input
@@ -80,67 +80,70 @@ export default function PlayerControls({
           step={0.1}
           value={currentTime}
           onChange={(e) => onSeek(parseFloat(e.target.value))}
-          className="flex-1 h-1.5 appearance-none bg-white/20 rounded-full cursor-pointer
-            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
+          className="flex-1 h-2 sm:h-1.5 appearance-none bg-white/20 rounded-full cursor-pointer
+            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
+            sm:[&::-webkit-slider-thumb]:w-3.5 sm:[&::-webkit-slider-thumb]:h-3.5
             [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
-            [&::-webkit-slider-thumb]:shadow-md"
+            [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:active:scale-110"
         />
-        <span className="text-xs text-white/50 w-10 tabular-nums">
+        <span className="text-[11px] sm:text-xs text-white/50 w-9 sm:w-10 tabular-nums shrink-0">
           {formatTime(duration)}
         </span>
       </div>
 
-      {/* Main controls */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onToggleMute}
-            className="p-2 rounded-full hover:bg-white/10 transition"
-            aria-label={muted ? "Unmute" : "Mute"}
-          >
-            {muted || volume === 0 ? (
-              <VolumeX className="w-5 h-5" />
-            ) : (
-              <Volume2 className="w-5 h-5" />
-            )}
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={muted ? 0 : volume}
-            onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-            className="w-16 sm:w-20 h-1 appearance-none bg-white/20 rounded-full cursor-pointer
-              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-          />
-        </div>
-
+      {/* Play row */}
+      <div className="flex items-center justify-center gap-4 sm:gap-5">
         <button
-          onClick={onTogglePlay}
-          className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center
-            hover:scale-105 active:scale-95 transition shadow-lg shrink-0"
-          aria-label={isPlaying ? "Pause" : "Play"}
+          onClick={onToggleMute}
+          className="p-2.5 sm:p-2 rounded-full hover:bg-white/10 active:bg-white/15 transition touch-manipulation"
+          aria-label={muted ? "Unmute" : "Mute"}
         >
-          {isPlaying ? (
-            <Pause className="w-5 h-5 fill-current" />
+          {muted || volume === 0 ? (
+            <VolumeX className="w-5 h-5" />
           ) : (
-            <Play className="w-5 h-5 fill-current ml-0.5" />
+            <Volume2 className="w-5 h-5" />
           )}
         </button>
 
-        {/* Style picker – scrollable */}
-        <div className="flex gap-1 overflow-x-auto max-w-[180px] sm:max-w-[280px] md:max-w-none scrollbar-none py-0.5">
+        <button
+          onClick={onTogglePlay}
+          className="w-14 h-14 sm:w-12 sm:h-12 rounded-full bg-white text-black flex items-center justify-center
+            active:scale-95 transition shadow-lg touch-manipulation"
+          aria-label={isPlaying ? "Pause" : "Play"}
+        >
+          {isPlaying ? (
+            <Pause className="w-6 h-6 sm:w-5 sm:h-5 fill-current" />
+          ) : (
+            <Play className="w-6 h-6 sm:w-5 sm:h-5 fill-current ml-0.5" />
+          )}
+        </button>
+
+        {/* Volume slider – hide label clutter on mobile */}
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={muted ? 0 : volume}
+          onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+          className="w-16 sm:w-20 h-1.5 appearance-none bg-white/20 rounded-full cursor-pointer
+            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
+            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+        />
+      </div>
+
+      {/* Style picker – full width horizontal scroll on mobile */}
+      <div className="-mx-1 px-1 overflow-x-auto scrollbar-none">
+        <div className="flex gap-1.5 min-w-max pb-0.5">
           {STYLES.map((s) => (
             <button
               key={s.value}
               onClick={() => onStyleChange(s.value)}
               className={clsx(
-                "px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition shrink-0",
+                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition touch-manipulation",
                 style === s.value
                   ? "bg-white text-black"
-                  : "bg-white/10 text-white/70 hover:bg-white/20"
+                  : "bg-white/10 text-white/70 active:bg-white/20"
               )}
             >
               {s.label}
