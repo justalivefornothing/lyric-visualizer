@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Pause, Volume2, VolumeX, SkipBack, SkipForward } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { AnimationStyle } from "@/lib/types";
 import clsx from "clsx";
 
@@ -29,6 +29,9 @@ const STYLES: { value: AnimationStyle; label: string }[] = [
   { value: "wave", label: "Wave" },
   { value: "scale", label: "Scale" },
   { value: "typewriter", label: "Type" },
+  { value: "fragment", label: "Fragment" },
+  { value: "orbit", label: "Orbit" },
+  { value: "chaos", label: "Chaos" },
 ];
 
 function formatTime(s: number) {
@@ -88,7 +91,7 @@ export default function PlayerControls({
       </div>
 
       {/* Main controls */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <button
             onClick={onToggleMute}
@@ -108,7 +111,7 @@ export default function PlayerControls({
             step={0.01}
             value={muted ? 0 : volume}
             onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-            className="w-20 h-1 appearance-none bg-white/20 rounded-full cursor-pointer
+            className="w-16 sm:w-20 h-1 appearance-none bg-white/20 rounded-full cursor-pointer
               [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
               [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
           />
@@ -117,7 +120,7 @@ export default function PlayerControls({
         <button
           onClick={onTogglePlay}
           className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center
-            hover:scale-105 active:scale-95 transition shadow-lg"
+            hover:scale-105 active:scale-95 transition shadow-lg shrink-0"
           aria-label={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? (
@@ -127,14 +130,14 @@ export default function PlayerControls({
           )}
         </button>
 
-        {/* Style picker */}
-        <div className="flex gap-1 overflow-x-auto max-w-[140px] md:max-w-none scrollbar-none">
+        {/* Style picker – scrollable */}
+        <div className="flex gap-1 overflow-x-auto max-w-[180px] sm:max-w-[280px] md:max-w-none scrollbar-none py-0.5">
           {STYLES.map((s) => (
             <button
               key={s.value}
               onClick={() => onStyleChange(s.value)}
               className={clsx(
-                "px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition",
+                "px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap transition shrink-0",
                 style === s.value
                   ? "bg-white text-black"
                   : "bg-white/10 text-white/70 hover:bg-white/20"
