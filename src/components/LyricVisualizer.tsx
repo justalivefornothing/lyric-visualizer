@@ -1,6 +1,11 @@
 "use client";
 
-import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
+import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  useSpring,
+} from "framer-motion";
 import { useMemo, useEffect, useState, useRef } from "react";
 import { LyricLine, AnimationStyle } from "@/lib/types";
 import clsx from "clsx";
@@ -25,7 +30,6 @@ const STYLES: AnimationStyle[] = [
   "chaos",
 ];
 
-// Deterministic pseudo-random from index (stable across re-renders)
 function seeded(n: number, salt = 0) {
   const x = Math.sin(n * 12.9898 + salt * 78.233) * 43758.5453;
   return x - Math.floor(x);
@@ -36,7 +40,6 @@ function pickStyle(style: AnimationStyle, index: number): AnimationStyle {
   return STYLES[Math.floor(seeded(index, 1) * STYLES.length)];
 }
 
-// Simple particle type
 interface Particle {
   id: number;
   x: number;
@@ -45,11 +48,22 @@ interface Particle {
   vy: number;
   size: number;
   life: number;
+  maxLife: number;
   color: string;
   char?: string;
+  rot: number;
+  vr: number;
 }
 
-const COLORS = ["#fff", "#a5b4fc", "#f472b6", "#22d3ee", "#fbbf24", "#c084fc"];
+const COLORS = [
+  "#ffffff",
+  "#c7d2fe",
+  "#f9a8d4",
+  "#67e8f9",
+  "#fde68a",
+  "#e9d5ff",
+  "#a5f3fc",
+];
 
 export default function LyricVisualizer({
   lines,
@@ -61,7 +75,7 @@ export default function LyricVisualizer({
     if (!lines.length) return -1;
     let idx = -1;
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startTime <= currentTime + 0.12) idx = i;
+      if (lines[i].startTime <= currentTime + 0.1) idx = i;
       else break;
     }
     return idx;
@@ -69,70 +83,79 @@ export default function LyricVisualizer({
 
   const activeLine = activeIndex >= 0 ? lines[activeIndex] : null;
   const prevLine = activeIndex > 0 ? lines[activeIndex - 1] : null;
-  const currentStyle = pickStyle(style, activeIndex);
+  const nextLine =
+    activeIndex >= 0 && activeIndex < lines.length - 1
+      ? lines[activeIndex + 1]
+      : null;
+  const currentStyle = pickStyle(style, Math.max(0, activeIndex));
 
-  // Camera shake
   const shakeX = useMotionValue(0);
   const shakeY = useMotionValue(0);
-  const smoothX = useSpring(shakeX, { stiffness: 400, damping: 18 });
-  const smoothY = useSpring(shakeY, { stiffness: 400, damping: 18 });
+  const smoothX = useSpring(shakeX, { stiffness: 380, damping: 16 });
+  const smoothY = useSpring(shakeY, { stiffness: 380, damping: 16 });
 
-  // Beat energy (simulated from line transitions + time)
   const [energy, setEnergy] = useState(0);
   const lastIndex = useRef(-1);
 
   useEffect(() => {
     if (activeIndex !== lastIndex.current && activeIndex >= 0) {
       lastIndex.current = activeIndex;
-      // Punch on new line
-      const intensity = 0.6 + seeded(activeIndex, 7) * 0.8;
+      const intensity = 0.7 + seeded(activeIndex, 7) * 0.9;
       setEnergy(intensity);
-      shakeX.set((seeded(activeIndex, 2) - 0.5) * 14 * intensity);
-      shakeY.set((seeded(activeIndex, 3) - 0.5) * 10 * intensity);
-      setTimeout(() => {
+      shakeX.set((seeded(activeIndex, 2) - 0.5) * 16 * intensity);
+      shakeY.set((seeded(activeIndex, 3) - 0.5) * 12 * intensity);
+      const t = setTimeout(() => {
         shakeX.set(0);
         shakeY.set(0);
-      }, 180);
+      }, 200);
+      return () => clearTimeout(t);
     }
   }, [activeIndex, shakeX, shakeY]);
 
   useEffect(() => {
     if (!isPlaying) return;
     const id = setInterval(() => {
-      setEnergy((e) => Math.max(0, e * 0.92));
-    }, 50);
+      setEnergy((e) => Math.max(0, e * 0.9));
+    }, 40);
     return () => clearInterval(id);
   }, [isPlaying]);
 
-  // Particles
   const [particles, setParticles] = useState<Particle[]>([]);
   const particleId = useRef(0);
 
   useEffect(() => {
     if (activeIndex < 0 || !activeLine) return;
-    const words = activeLine.text.split(/\s+/);
+    const words = activeLine.text.split(/\s+/).filter(Boolean);
+    const isMobile =
+      typeof window !== "undefined" && window.innerWidth < 640;
+    const count = Math.min(isMobile ? 16 : 36, 6 + words.length * 3);
     const newParts: Particle[] = [];
-    const count = Math.min(28, 8 + words.length * 3);
 
     for (let i = 0; i < count; i++) {
       const angle = seeded(activeIndex + i, 9) * Math.PI * 2;
-      const speed = 1.5 + seeded(activeIndex + i, 11) * 4;
+      const speed = 2 + seeded(activeIndex + i, 11) * 5;
+      const life = 0.85 + seeded(activeIndex + i, 25) * 0.4;
       newParts.push({
         id: particleId.current++,
-        x: (seeded(activeIndex + i, 13) - 0.5) * 60,
-        y: (seeded(activeIndex + i, 15) - 0.5) * 40,
+        x: (seeded(activeIndex + i, 13) - 0.5) * 40,
+        y: (seeded(activeIndex + i, 15) - 0.5) * 30,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 1.5,
-        size: 2 + seeded(activeIndex + i, 17) * 5,
-        life: 1,
+        vy: Math.sin(angle) * speed - 2,
+        size: 2 + seeded(activeIndex + i, 17) * 6,
+        life,
+        maxLife: life,
         color: COLORS[Math.floor(seeded(activeIndex + i, 19) * COLORS.length)],
         char:
-          seeded(activeIndex + i, 21) > 0.65
-            ? words[Math.floor(seeded(activeIndex + i, 23) * words.length)]?.[0] ?? "•"
+          seeded(activeIndex + i, 21) > 0.55
+            ? words[
+                Math.floor(seeded(activeIndex + i, 23) * words.length)
+              ]?.[0] ?? "·"
             : undefined,
+        rot: seeded(activeIndex + i, 27) * 360,
+        vr: (seeded(activeIndex + i, 29) - 0.5) * 8,
       });
     }
-    setParticles((prev) => [...prev.slice(-40), ...newParts]);
+    setParticles((prev) => [...prev.slice(-50), ...newParts]);
   }, [activeIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -144,94 +167,96 @@ export default function LyricVisualizer({
             ...p,
             x: p.x + p.vx,
             y: p.y + p.vy,
-            vy: p.vy + 0.08,
-            life: p.life - 0.018,
+            vy: p.vy + 0.09,
+            rot: p.rot + p.vr,
+            life: p.life - 0.016,
           }))
           .filter((p) => p.life > 0)
       );
-    }, 32);
+    }, 30);
     return () => clearInterval(id);
   }, [particles.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Perspective / 3D tilt based on energy
-  const perspective = 900 + energy * 200;
-  const rotateX = energy * (seeded(activeIndex, 31) - 0.5) * 8;
-  const rotateY = energy * (seeded(activeIndex, 33) - 0.5) * 10;
+  const perspective = 1000 + energy * 250;
+  const rotateX = energy * (seeded(activeIndex, 31) - 0.5) * 10;
+  const rotateY = energy * (seeded(activeIndex, 33) - 0.5) * 12;
 
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-      {/* Deep background layers */}
+      {/* Atmospheric core glow */}
       <div className="absolute inset-0 pointer-events-none">
         <motion.div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70vmin] h-[70vmin] rounded-full opacity-25 blur-3xl"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(90vmin,700px)] h-[min(90vmin,700px)] rounded-full"
+          style={{ opacity: 0.22 + energy * 0.15 }}
           animate={{
             background: [
-              "radial-gradient(circle, #6366f1 0%, transparent 70%)",
-              "radial-gradient(circle, #ec4899 0%, transparent 70%)",
-              "radial-gradient(circle, #06b6d4 0%, transparent 70%)",
-              "radial-gradient(circle, #a855f7 0%, transparent 70%)",
-              "radial-gradient(circle, #6366f1 0%, transparent 70%)",
+              "radial-gradient(circle, #6366f1 0%, transparent 68%)",
+              "radial-gradient(circle, #db2777 0%, transparent 68%)",
+              "radial-gradient(circle, #06b6d4 0%, transparent 68%)",
+              "radial-gradient(circle, #8b5cf6 0%, transparent 68%)",
+              "radial-gradient(circle, #6366f1 0%, transparent 68%)",
             ],
-            scale: 1 + energy * 0.25,
+            scale: 1 + energy * 0.2,
           }}
-          transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
+          transition={{ duration: 16, repeat: Infinity, ease: "linear" }}
         />
-        {/* Scanlines */}
-        <div
-          className="absolute inset-0 opacity-[0.04] pointer-events-none"
+        {/* Soft ring */}
+        <motion.div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/5"
           style={{
-            backgroundImage:
-              "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.15) 2px, rgba(255,255,255,0.15) 3px)",
+            width: "min(70vmin, 520px)",
+            height: "min(70vmin, 520px)",
+            opacity: 0.3 + energy * 0.2,
           }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
         />
-        {/* Vignette */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(0,0,0,0.75)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_25%,rgba(0,0,0,0.55)_100%)]" />
       </div>
 
-      {/* Particle layer */}
+      {/* Particles */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {particles.map((p) => (
-          <div
-            key={p.id}
-            className="absolute left-1/2 top-1/2 font-bold select-none"
-            style={{
-              transform: `translate(${p.x}px, ${p.y}px)`,
-              opacity: p.life,
-              color: p.color,
-              fontSize: p.char ? `${p.size * 3}px` : undefined,
-              width: p.char ? undefined : p.size,
-              height: p.char ? undefined : p.size,
-              borderRadius: p.char ? undefined : "50%",
-              background: p.char ? undefined : p.color,
-              textShadow: p.char ? `0 0 8px ${p.color}` : undefined,
-              filter: `blur(${(1 - p.life) * 2}px)`,
-            }}
-          >
-            {p.char ?? null}
-          </div>
-        ))}
+        {particles.map((p) => {
+          const t = p.life / p.maxLife;
+          return (
+            <div
+              key={p.id}
+              className="absolute left-1/2 top-1/2 font-black select-none will-change-transform"
+              style={{
+                transform: `translate(${p.x}px, ${p.y}px) rotate(${p.rot}deg)`,
+                opacity: t * 0.95,
+                color: p.color,
+                fontSize: p.char ? `${Math.max(10, p.size * 2.8)}px` : undefined,
+                width: p.char ? undefined : p.size,
+                height: p.char ? undefined : p.size,
+                borderRadius: p.char ? undefined : "50%",
+                background: p.char ? undefined : p.color,
+                boxShadow: p.char
+                  ? `0 0 ${10 * t}px ${p.color}`
+                  : `0 0 ${6 * t}px ${p.color}`,
+                filter: `blur(${(1 - t) * 2.5}px)`,
+              }}
+            >
+              {p.char ?? null}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Main stage with camera shake + 3D */}
+      {/* Stage */}
       <motion.div
         className="relative z-10 w-full h-full flex items-center justify-center"
-        style={{
-          x: smoothX,
-          y: smoothY,
-          perspective: `${perspective}px`,
-        }}
+        style={{ x: smoothX, y: smoothY, perspective: `${perspective}px` }}
       >
         <motion.div
-          className="relative px-4 max-w-6xl w-full text-center"
+          className="relative px-3 sm:px-6 max-w-5xl w-full text-center"
           style={{
             rotateX,
             rotateY,
             transformStyle: "preserve-3d",
           }}
-          animate={{
-            scale: 1 + energy * 0.04,
-          }}
-          transition={{ type: "spring", stiffness: 200, damping: 20 }}
+          animate={{ scale: 1 + energy * 0.05 }}
+          transition={{ type: "spring", stiffness: 180, damping: 18 }}
         >
           <AnimatePresence mode="wait">
             {activeLine && (
@@ -239,15 +264,19 @@ export default function LyricVisualizer({
                 key={`${activeIndex}-${activeLine.text}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0, filter: "blur(12px)", scale: 1.15 }}
-                transition={{ duration: 0.25 }}
+                exit={{
+                  opacity: 0,
+                  filter: "blur(14px)",
+                  scale: 1.12,
+                  y: -20,
+                }}
+                transition={{ duration: 0.28 }}
               >
                 <LyricComposition
                   text={activeLine.text}
                   style={currentStyle}
                   lineIndex={activeIndex}
                   energy={energy}
-                  isPlaying={isPlaying}
                 />
               </motion.div>
             )}
@@ -255,58 +284,67 @@ export default function LyricVisualizer({
         </motion.div>
       </motion.div>
 
-      {/* Ghost previous line */}
+      {/* Previous line ghost */}
       {prevLine && (
         <motion.p
           key={`prev-${activeIndex}`}
-          initial={{ opacity: 0.35, y: 0, filter: "blur(0px)" }}
-          animate={{ opacity: 0, y: 50, filter: "blur(6px)" }}
-          transition={{ duration: 1.4 }}
-          className="absolute bottom-28 left-0 right-0 text-center text-white/25 text-base md:text-xl font-medium px-8 pointer-events-none"
+          initial={{ opacity: 0.4, y: 0, filter: "blur(0px)" }}
+          animate={{ opacity: 0, y: 36, filter: "blur(8px)" }}
+          transition={{ duration: 1.5 }}
+          className="absolute bottom-[22%] sm:bottom-24 left-0 right-0 text-center text-white/20 text-sm sm:text-lg font-medium px-6 pointer-events-none line-clamp-1"
         >
           {prevLine.text}
         </motion.p>
       )}
 
-      {/* Timeline dots */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-40 z-20">
+      {/* Upcoming hint */}
+      {nextLine && isPlaying && (
+        <motion.p
+          key={`next-${activeIndex}`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.15 }}
+          className="absolute top-[18%] sm:top-16 left-0 right-0 text-center text-white/20 text-xs sm:text-sm font-medium px-6 pointer-events-none line-clamp-1"
+        >
+          {nextLine.text}
+        </motion.p>
+      )}
+
+      {/* Progress rail */}
+      <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex gap-1 sm:gap-1.5 opacity-50 z-20">
         {lines
-          .slice(Math.max(0, activeIndex - 4), activeIndex + 5)
-          .map((_, i) => (
-            <div
-              key={i}
-              className={clsx(
-                "w-1.5 h-1.5 rounded-full transition-all duration-300",
-                i === 4 ? "bg-white scale-150 shadow-[0_0_8px_white]" : "bg-white/40"
-              )}
-            />
-          ))}
+          .slice(Math.max(0, activeIndex - 3), activeIndex + 4)
+          .map((_, i) => {
+            const isActive = i === Math.min(3, activeIndex);
+            return (
+              <div
+                key={i}
+                className={clsx(
+                  "rounded-full transition-all duration-300",
+                  isActive
+                    ? "w-4 h-1.5 sm:w-5 sm:h-1.5 bg-white shadow-[0_0_10px_rgba(255,255,255,0.7)]"
+                    : "w-1.5 h-1.5 bg-white/30"
+                )}
+              />
+            );
+          })}
       </div>
     </div>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/*  Per-line composition – picks layout + effects based on style     */
-/* ------------------------------------------------------------------ */
 
 function LyricComposition({
   text,
   style,
   lineIndex,
   energy,
-  isPlaying,
 }: {
   text: string;
   style: AnimationStyle;
   lineIndex: number;
   energy: number;
-  isPlaying: boolean;
 }) {
   const words = text.split(/\s+/).filter(Boolean);
-
-  // Chromatic aberration intensity
-  const chroma = 1.5 + energy * 4;
+  const chroma = 2 + energy * 5;
 
   if (style === "glitch" || style === "chaos") {
     return (
@@ -319,16 +357,14 @@ function LyricComposition({
       />
     );
   }
-
   if (style === "fragment") {
-    return <FragmentBlock words={words} lineIndex={lineIndex} energy={energy} />;
+    return (
+      <FragmentBlock words={words} lineIndex={lineIndex} energy={energy} />
+    );
   }
-
   if (style === "orbit") {
     return <OrbitBlock words={words} lineIndex={lineIndex} />;
   }
-
-  // Default word-by-word kinetic for the rest
   return (
     <WordBlock
       words={words}
@@ -339,8 +375,6 @@ function LyricComposition({
     />
   );
 }
-
-/* ---------- Word-by-word with chromatic layers ---------- */
 
 function WordBlock({
   words,
@@ -356,51 +390,52 @@ function WordBlock({
   chroma: number;
 }) {
   return (
-    <h1 className="relative text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter leading-[1.05]">
-      {/* Chromatic aberration layers */}
+    <h1 className="relative text-[1.75rem] leading-tight sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter lyric-glow">
+      {/* Chromatic layers */}
       <span
-        className="absolute inset-0 text-cyan-400/60 pointer-events-none select-none"
+        className="absolute inset-0 text-cyan-300/50 pointer-events-none select-none"
         style={{
-          transform: `translate(${-chroma}px, ${chroma * 0.3}px)`,
+          transform: `translate(${-chroma}px, ${chroma * 0.25}px)`,
           mixBlendMode: "screen",
-          filter: "blur(0.4px)",
         }}
         aria-hidden
       >
         {words.map((w, i) => (
-          <span key={i} className="inline-block mr-[0.28em]">
+          <span key={i} className="inline-block mr-[0.25em]">
             {w}
           </span>
         ))}
       </span>
       <span
-        className="absolute inset-0 text-pink-500/50 pointer-events-none select-none"
+        className="absolute inset-0 text-fuchsia-400/45 pointer-events-none select-none"
         style={{
-          transform: `translate(${chroma}px, ${-chroma * 0.25}px)`,
+          transform: `translate(${chroma}px, ${-chroma * 0.2}px)`,
           mixBlendMode: "screen",
-          filter: "blur(0.4px)",
         }}
         aria-hidden
       >
         {words.map((w, i) => (
-          <span key={i} className="inline-block mr-[0.28em]">
+          <span key={i} className="inline-block mr-[0.25em]">
             {w}
           </span>
         ))}
       </span>
 
-      {/* Main words */}
       {words.map((word, i) => {
-        const delay = i * (style === "typewriter" ? 0.07 : 0.045);
+        const delay = i * (style === "typewriter" ? 0.06 : 0.04);
         const r = seeded(lineIndex + i, 41);
 
-        let initial: any = { opacity: 0 };
-        let animate: any = { opacity: 1 };
-        let exit: any = { opacity: 0, y: -30, filter: "blur(8px)" };
+        let initial: Record<string, unknown> = { opacity: 0 };
+        let animate: Record<string, unknown> = { opacity: 1 };
 
         switch (style) {
           case "drop":
-            initial = { y: -160 - r * 80, opacity: 0, rotate: -15 + r * 30, scale: 0.6 };
+            initial = {
+              y: -140 - r * 100,
+              opacity: 0,
+              rotate: -18 + r * 36,
+              scale: 0.5,
+            };
             animate = {
               y: 0,
               opacity: 1,
@@ -408,19 +443,19 @@ function WordBlock({
               scale: 1,
               transition: {
                 type: "spring",
-                stiffness: 110 + r * 40,
-                damping: 11,
+                stiffness: 100 + r * 50,
+                damping: 10,
                 delay,
               },
             };
             break;
           case "shatter":
             initial = {
-              x: (r - 0.5) * 220,
-              y: (seeded(lineIndex + i, 43) - 0.5) * 180,
+              x: (r - 0.5) * 260,
+              y: (seeded(lineIndex + i, 43) - 0.5) * 200,
               opacity: 0,
-              scale: 0.2,
-              rotate: (r - 0.5) * 90,
+              scale: 0.15,
+              rotate: (r - 0.5) * 100,
             };
             animate = {
               x: 0,
@@ -430,20 +465,20 @@ function WordBlock({
               rotate: 0,
               transition: {
                 type: "spring",
-                stiffness: 85,
-                damping: 13,
-                delay: i * 0.035,
+                stiffness: 80,
+                damping: 12,
+                delay: i * 0.03,
               },
             };
             break;
           case "bounce":
-            initial = { y: 70, opacity: 0, scale: 0.5 };
+            initial = { y: 80, opacity: 0, scale: 0.4 };
             animate = {
-              y: [70, -22, 0],
+              y: [80, -26, 0],
               opacity: 1,
-              scale: [0.5, 1.18, 1],
+              scale: [0.4, 1.22, 1],
               transition: {
-                duration: 0.55,
+                duration: 0.6,
                 delay,
                 times: [0, 0.55, 1],
                 ease: "easeOut",
@@ -451,60 +486,65 @@ function WordBlock({
             };
             break;
           case "wave":
-            initial = { y: 50, opacity: 0, rotateX: 40 };
+            initial = { y: 55, opacity: 0, rotateX: 50 };
             animate = {
-              y: [50, -14, 0],
+              y: [55, -16, 0],
               opacity: 1,
               rotateX: 0,
               transition: {
-                duration: 0.65,
-                delay: i * 0.06,
+                duration: 0.7,
+                delay: i * 0.055,
                 ease: [0.22, 1, 0.36, 1],
               },
             };
             break;
           case "scale":
-            initial = { scale: 0.15, opacity: 0, filter: "blur(16px)" };
+            initial = { scale: 0.1, opacity: 0, filter: "blur(20px)" };
             animate = {
               scale: 1,
               opacity: 1,
               filter: "blur(0px)",
               transition: {
                 type: "spring",
-                stiffness: 130,
-                damping: 14,
-                delay: i * 0.04,
+                stiffness: 120,
+                damping: 13,
+                delay: i * 0.035,
               },
             };
             break;
           case "typewriter":
-            initial = { opacity: 0, y: 8 };
+            initial = { opacity: 0, y: 10 };
             animate = {
               opacity: 1,
               y: 0,
-              transition: { duration: 0.12, delay },
+              transition: { duration: 0.1, delay },
             };
             break;
           default:
-            initial = { y: 30, opacity: 0, scale: 0.8 };
+            initial = { y: 35, opacity: 0, scale: 0.75 };
             animate = {
               y: 0,
               opacity: 1,
               scale: 1,
-              transition: { type: "spring", stiffness: 120, damping: 14, delay },
+              transition: {
+                type: "spring",
+                stiffness: 115,
+                damping: 13,
+                delay,
+              },
             };
         }
 
         return (
           <motion.span
             key={`${lineIndex}-${i}-${word}`}
-            className="inline-block mr-[0.28em] relative z-10"
+            className="inline-block mr-[0.25em] relative z-10"
             style={{
-              textShadow: `0 0 ${8 + energy * 20}px rgba(255,255,255,${0.25 + energy * 0.4})`,
+              textShadow: `0 0 ${12 + energy * 28}px rgba(255,255,255,${0.3 + energy * 0.45})`,
             }}
             initial={initial}
             animate={animate}
-            exit={exit}
+            exit={{ opacity: 0, y: -25, filter: "blur(8px)" }}
           >
             {word}
           </motion.span>
@@ -513,8 +553,6 @@ function WordBlock({
     </h1>
   );
 }
-
-/* ---------- Glitch / Chaos ---------- */
 
 function GlitchBlock({
   text,
@@ -531,51 +569,52 @@ function GlitchBlock({
 }) {
   return (
     <motion.h1
-      className="relative text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter"
+      className="relative text-[1.75rem] leading-tight sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter lyric-glow"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
-      {/* RGB split layers */}
       <motion.span
-        className="absolute inset-0 text-cyan-400 opacity-80"
+        className="absolute inset-0 text-cyan-300 opacity-80"
         style={{ mixBlendMode: "screen" }}
         animate={{
-          x: [0, -chroma * 1.5, chroma, -chroma * 0.5, 0],
-          y: [0, chroma * 0.4, -chroma * 0.3, 0],
-          opacity: [0.7, 0.95, 0.5, 0.85, 0.7],
+          x: [0, -chroma * 1.6, chroma, -chroma * 0.4, 0],
+          y: [0, chroma * 0.35, -chroma * 0.25, 0],
         }}
-        transition={{ duration: 0.35, repeat: chaos ? 3 : 1 }}
+        transition={{ duration: 0.32, repeat: chaos ? 4 : 1 }}
       >
         {text}
       </motion.span>
       <motion.span
-        className="absolute inset-0 text-pink-500 opacity-70"
+        className="absolute inset-0 text-fuchsia-400 opacity-70"
         style={{ mixBlendMode: "screen" }}
         animate={{
-          x: [0, chroma * 1.8, -chroma, chroma * 0.6, 0],
-          y: [0, -chroma * 0.5, chroma * 0.3, 0],
+          x: [0, chroma * 1.9, -chroma, chroma * 0.5, 0],
+          y: [0, -chroma * 0.4, chroma * 0.25, 0],
         }}
-        transition={{ duration: 0.32, repeat: chaos ? 3 : 1, delay: 0.04 }}
+        transition={{
+          duration: 0.28,
+          repeat: chaos ? 4 : 1,
+          delay: 0.03,
+        }}
       >
         {text}
       </motion.span>
 
-      {/* Main + occasional slice */}
       <span className="relative z-10">
         {words.map((word, i) => (
           <motion.span
             key={i}
-            className="inline-block mr-[0.28em]"
+            className="inline-block mr-[0.25em]"
             initial={{
               opacity: 0,
-              x: chaos ? (seeded(lineIndex + i, 51) - 0.5) * 80 : 0,
-              filter: "blur(4px)",
+              x: chaos ? (seeded(lineIndex + i, 51) - 0.5) * 90 : 0,
+              filter: "blur(6px)",
             }}
             animate={{
               opacity: 1,
               x: 0,
               filter: "blur(0px)",
-              transition: { delay: i * 0.04, duration: 0.2 },
+              transition: { delay: i * 0.035, duration: 0.18 },
             }}
           >
             {word}
@@ -583,30 +622,25 @@ function GlitchBlock({
         ))}
       </span>
 
-      {/* Horizontal tear slices */}
       {chaos &&
-        [0.25, 0.55, 0.78].map((pos, i) => (
+        [0.22, 0.48, 0.72].map((pos, i) => (
           <motion.span
             key={i}
             className="absolute left-0 right-0 overflow-hidden text-white/90"
-            style={{
-              top: `${pos * 100}%`,
-              height: "18%",
-              clipPath: `inset(0 0 0 0)`,
-            }}
+            style={{ top: `${pos * 100}%`, height: "16%" }}
             animate={{
-              x: [0, (i % 2 === 0 ? 1 : -1) * (12 + chroma * 3), 0],
+              x: [0, (i % 2 === 0 ? 1 : -1) * (14 + chroma * 4), 0],
             }}
-            transition={{ duration: 0.2, delay: 0.05 * i, repeat: 2 }}
+            transition={{ duration: 0.18, delay: 0.04 * i, repeat: 3 }}
           >
-            <span style={{ transform: `translateY(-${pos * 100}%)` }}>{text}</span>
+            <span style={{ transform: `translateY(-${pos * 100}%)` }}>
+              {text}
+            </span>
           </motion.span>
         ))}
     </motion.h1>
   );
 }
-
-/* ---------- Fragmentation (letters explode then reform) ---------- */
 
 function FragmentBlock({
   words,
@@ -620,29 +654,29 @@ function FragmentBlock({
   const letters = words.join(" ").split("");
 
   return (
-    <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter leading-none">
+    <h1 className="text-[1.75rem] leading-none sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter lyric-glow">
       {letters.map((char, i) => {
         if (char === " ") {
-          return <span key={i} className="inline-block w-[0.3em]" />;
+          return <span key={i} className="inline-block w-[0.28em]" />;
         }
         const r = seeded(lineIndex + i, 61);
         const angle = r * Math.PI * 2;
-        const dist = 80 + r * 140;
+        const dist = 90 + r * 160;
 
         return (
           <motion.span
             key={i}
             className="inline-block"
             style={{
-              textShadow: `0 0 ${6 + energy * 16}px rgba(255,255,255,0.5)`,
+              textShadow: `0 0 ${8 + energy * 20}px rgba(255,255,255,0.55)`,
             }}
             initial={{
               x: Math.cos(angle) * dist,
               y: Math.sin(angle) * dist,
               opacity: 0,
-              scale: 0.1,
-              rotate: (r - 0.5) * 120,
-              filter: "blur(8px)",
+              scale: 0.05,
+              rotate: (r - 0.5) * 140,
+              filter: "blur(10px)",
             }}
             animate={{
               x: 0,
@@ -653,16 +687,10 @@ function FragmentBlock({
               filter: "blur(0px)",
               transition: {
                 type: "spring",
-                stiffness: 70 + r * 50,
-                damping: 12,
-                delay: i * 0.018,
+                stiffness: 65 + r * 55,
+                damping: 11,
+                delay: i * 0.015,
               },
-            }}
-            exit={{
-              opacity: 0,
-              scale: 0,
-              filter: "blur(10px)",
-              transition: { duration: 0.2 },
             }}
           >
             {char}
@@ -673,25 +701,24 @@ function FragmentBlock({
   );
 }
 
-/* ---------- Orbit (words circle in then land) ---------- */
-
 function OrbitBlock({ words, lineIndex }: { words: string[]; lineIndex: number }) {
   return (
-    <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter">
+    <h1 className="text-[1.75rem] leading-tight sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter lyric-glow">
       {words.map((word, i) => {
         const r = seeded(lineIndex + i, 71);
-        const angle = (i / Math.max(words.length, 1)) * Math.PI * 2 + r;
-        const radius = 160 + r * 80;
+        const angle =
+          (i / Math.max(words.length, 1)) * Math.PI * 2 + r * 0.5;
+        const radius = 140 + r * 100;
 
         return (
           <motion.span
             key={i}
-            className="inline-block mr-[0.28em]"
+            className="inline-block mr-[0.25em]"
             initial={{
               x: Math.cos(angle) * radius,
               y: Math.sin(angle) * radius,
               opacity: 0,
-              scale: 0.3,
+              scale: 0.25,
               rotate: angle * (180 / Math.PI),
             }}
             animate={{
@@ -702,9 +729,9 @@ function OrbitBlock({ words, lineIndex }: { words: string[]; lineIndex: number }
               rotate: 0,
               transition: {
                 type: "spring",
-                stiffness: 95,
-                damping: 14,
-                delay: i * 0.05,
+                stiffness: 90,
+                damping: 13,
+                delay: i * 0.045,
               },
             }}
           >
