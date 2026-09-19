@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, Maximize2, Minimize2 } from "lucide-react";
 import { AnimationStyle } from "@/lib/types";
 import clsx from "clsx";
 
@@ -18,6 +18,8 @@ interface Props {
   onStyleChange: (s: AnimationStyle) => void;
   title?: string;
   artist?: string;
+  immersive?: boolean;
+  onToggleImmersive?: () => void;
 }
 
 const STYLES: { value: AnimationStyle; label: string }[] = [
@@ -32,6 +34,9 @@ const STYLES: { value: AnimationStyle; label: string }[] = [
   { value: "fragment", label: "Fragment" },
   { value: "orbit", label: "Orbit" },
   { value: "chaos", label: "Chaos" },
+  { value: "pulse", label: "Pulse" },
+  { value: "cascade", label: "Cascade" },
+  { value: "zoom", label: "Zoom" },
 ];
 
 function formatTime(s: number) {
@@ -55,20 +60,22 @@ export default function PlayerControls({
   onStyleChange,
   title,
   artist,
+  immersive,
+  onToggleImmersive,
 }: Props) {
   return (
     <div className="glass rounded-2xl p-3 sm:p-4 md:p-5 flex flex-col gap-2.5 sm:gap-3 shadow-2xl">
-      {/* Meta */}
       {(title || artist) && (
         <div className="text-center">
           <p className="font-semibold text-sm truncate leading-tight">{title}</p>
           {artist && (
-            <p className="text-[11px] sm:text-xs text-white/50 truncate mt-0.5">{artist}</p>
+            <p className="text-[11px] sm:text-xs text-white/50 truncate mt-0.5">
+              {artist}
+            </p>
           )}
         </div>
       )}
 
-      {/* Progress – larger touch target on mobile */}
       <div className="flex items-center gap-2 sm:gap-3">
         <span className="text-[11px] sm:text-xs text-white/50 w-9 sm:w-10 text-right tabular-nums shrink-0">
           {formatTime(currentTime)}
@@ -84,18 +91,17 @@ export default function PlayerControls({
             [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
             sm:[&::-webkit-slider-thumb]:w-3.5 sm:[&::-webkit-slider-thumb]:h-3.5
             [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
-            [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:active:scale-110"
+            [&::-webkit-slider-thumb]:shadow-md"
         />
         <span className="text-[11px] sm:text-xs text-white/50 w-9 sm:w-10 tabular-nums shrink-0">
           {formatTime(duration)}
         </span>
       </div>
 
-      {/* Play row */}
-      <div className="flex items-center justify-center gap-4 sm:gap-5">
+      <div className="flex items-center justify-center gap-3 sm:gap-5">
         <button
           onClick={onToggleMute}
-          className="p-2.5 sm:p-2 rounded-full hover:bg-white/10 active:bg-white/15 transition touch-manipulation"
+          className="p-2.5 rounded-full hover:bg-white/10 active:bg-white/15 transition touch-manipulation"
           aria-label={muted ? "Unmute" : "Mute"}
         >
           {muted || volume === 0 ? (
@@ -118,7 +124,6 @@ export default function PlayerControls({
           )}
         </button>
 
-        {/* Volume slider – hide label clutter on mobile */}
         <input
           type="range"
           min={0}
@@ -126,13 +131,27 @@ export default function PlayerControls({
           step={0.01}
           value={muted ? 0 : volume}
           onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-          className="w-16 sm:w-20 h-1.5 appearance-none bg-white/20 rounded-full cursor-pointer
+          className="w-14 sm:w-20 h-1.5 appearance-none bg-white/20 rounded-full cursor-pointer
             [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
             [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
         />
+
+        {onToggleImmersive && (
+          <button
+            onClick={onToggleImmersive}
+            className="p-2.5 rounded-full hover:bg-white/10 active:bg-white/15 transition touch-manipulation"
+            aria-label={immersive ? "Exit immersive" : "Immersive mode"}
+            title="Immersive (hide chrome)"
+          >
+            {immersive ? (
+              <Minimize2 className="w-5 h-5" />
+            ) : (
+              <Maximize2 className="w-5 h-5" />
+            )}
+          </button>
+        )}
       </div>
 
-      {/* Style picker – full width horizontal scroll on mobile */}
       <div className="-mx-1 px-1 overflow-x-auto scrollbar-none">
         <div className="flex gap-1.5 min-w-max pb-0.5">
           {STYLES.map((s) => (
