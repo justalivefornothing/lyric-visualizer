@@ -28,6 +28,9 @@ const STYLES: AnimationStyle[] = [
   "fragment",
   "orbit",
   "chaos",
+  "pulse",
+  "cascade",
+  "zoom",
 ];
 
 function seeded(n: number, salt = 0) {
@@ -183,7 +186,6 @@ export default function LyricVisualizer({
 
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-      {/* Atmospheric core glow */}
       <div className="absolute inset-0 pointer-events-none">
         <motion.div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(90vmin,700px)] h-[min(90vmin,700px)] rounded-full"
@@ -200,7 +202,6 @@ export default function LyricVisualizer({
           }}
           transition={{ duration: 16, repeat: Infinity, ease: "linear" }}
         />
-        {/* Soft ring */}
         <motion.div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/5"
           style={{
@@ -214,7 +215,6 @@ export default function LyricVisualizer({
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_25%,rgba(0,0,0,0.55)_100%)]" />
       </div>
 
-      {/* Particles */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {particles.map((p) => {
           const t = p.life / p.maxLife;
@@ -243,7 +243,6 @@ export default function LyricVisualizer({
         })}
       </div>
 
-      {/* Stage */}
       <motion.div
         className="relative z-10 w-full h-full flex items-center justify-center"
         style={{ x: smoothX, y: smoothY, perspective: `${perspective}px` }}
@@ -284,7 +283,6 @@ export default function LyricVisualizer({
         </motion.div>
       </motion.div>
 
-      {/* Previous line ghost */}
       {prevLine && (
         <motion.p
           key={`prev-${activeIndex}`}
@@ -297,7 +295,6 @@ export default function LyricVisualizer({
         </motion.p>
       )}
 
-      {/* Upcoming hint */}
       {nextLine && isPlaying && (
         <motion.p
           key={`next-${activeIndex}`}
@@ -309,7 +306,6 @@ export default function LyricVisualizer({
         </motion.p>
       )}
 
-      {/* Progress rail */}
       <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex gap-1 sm:gap-1.5 opacity-50 z-20">
         {lines
           .slice(Math.max(0, activeIndex - 3), activeIndex + 4)
@@ -391,7 +387,6 @@ function WordBlock({
 }) {
   return (
     <h1 className="relative text-[1.75rem] leading-tight sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black tracking-tighter lyric-glow">
-      {/* Chromatic layers */}
       <span
         className="absolute inset-0 text-cyan-300/50 pointer-events-none select-none"
         style={{
@@ -422,7 +417,7 @@ function WordBlock({
       </span>
 
       {words.map((word, i) => {
-        const delay = i * (style === "typewriter" ? 0.06 : 0.04);
+        const delay = i * (style === "typewriter" ? 0.06 : style === "cascade" ? 0.08 : 0.04);
         const r = seeded(lineIndex + i, 41);
 
         let initial: Record<string, unknown> = { opacity: 0 };
@@ -518,6 +513,53 @@ function WordBlock({
               opacity: 1,
               y: 0,
               transition: { duration: 0.1, delay },
+            };
+            break;
+          case "pulse":
+            initial = { scale: 0.3, opacity: 0 };
+            animate = {
+              scale: [0.3, 1.25, 1],
+              opacity: 1,
+              transition: {
+                duration: 0.55,
+                delay: i * 0.05,
+                times: [0, 0.5, 1],
+                ease: "easeOut",
+              },
+            };
+            break;
+          case "cascade":
+            initial = { y: -80, opacity: 0, rotateX: -40 };
+            animate = {
+              y: 0,
+              opacity: 1,
+              rotateX: 0,
+              transition: {
+                type: "spring",
+                stiffness: 90,
+                damping: 14,
+                delay: i * 0.09,
+              },
+            };
+            break;
+          case "zoom":
+            initial = {
+              scale: 2.5,
+              opacity: 0,
+              filter: "blur(12px)",
+              z: 80,
+            };
+            animate = {
+              scale: 1,
+              opacity: 1,
+              filter: "blur(0px)",
+              z: 0,
+              transition: {
+                type: "spring",
+                stiffness: 100,
+                damping: 15,
+                delay: i * 0.04,
+              },
             };
             break;
           default:
