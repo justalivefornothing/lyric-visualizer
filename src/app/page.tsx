@@ -174,7 +174,7 @@ export default function Home() {
             </h1>
           </div>
           <p className="text-white/50 text-sm md:text-base">
-            Paste a YouTube link or type "Song – Artist". Watch lyrics explode.
+            Paste a YouTube link or type {'"Song – Artist"'}. Watch lyrics explode.
           </p>
         </div>
 
